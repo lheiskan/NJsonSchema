@@ -8,6 +8,63 @@ namespace NJsonSchema.CodeGeneration.Tests.CSharp
     [TestClass]
     public class CSharpGeneratorTests
     {
+        [TestMethod]
+        public void multiple_refs_in_all_of_should_expand_to_single_def()
+        {
+            var schema = @"{
+                '$schema': 'http://json-schema.org/draft-04/schema#',
+                'id': 'http://some.domain.com/foo.json',
+                'x-typeName': 'foo',
+                'type': 'object',
+                'additionalProperties': false,
+                'definitions': {
+                    'tRef1': {
+                        'type': 'object',
+                        'properties': {
+                            'val1': {
+                                'type': 'string',
+                            }
+                        }
+                    },
+                    'tRef2': {
+                        'type': 'object',
+                        'properties': {
+                            'val2': {
+                                'type': 'string',
+                            }
+                        }
+                    },
+                    'tRef3': {
+                        'type': 'object',
+                        'properties': {
+                            'val3': {
+                                'type': 'string',
+                            }
+                        }
+                    }
+                },
+                'properties' : {
+                    'tAgg': {
+                        'allOf': [
+                            {'$ref': '#/definitions/tRef1'},
+                            {'$ref': '#/definitions/tRef2'},
+                            {'$ref': '#/definitions/tRef3'}
+                        ]
+                    }
+                }
+            }";
+            var s = NJsonSchema.JsonSchema4.FromJson(schema);
+            var settings = new CSharpGeneratorSettings() { ClassStyle = CSharpClassStyle.Poco, Namespace = "ns", };
+            var gen = new CSharpGenerator(s, settings);
+            var output = gen.GenerateFile();
+
+            /// Assert
+            Assert.IsTrue(output.Contains("public partial class tAgg"));
+            Assert.IsTrue(output.Contains("public string Val1 { get; set; }"));
+            Assert.IsTrue(output.Contains("public string Val2 { get; set; }"));
+            Assert.IsTrue(output.Contains("public string Val3 { get; set; }"));
+
+        } 
 
         [TestMethod]
         public void When_property_has_boolean_default_it_is_reflected_in_the_poco()
